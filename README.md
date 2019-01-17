@@ -1,4 +1,4 @@
-# Small procedural terrain generator
+# Small voxel procedural terrain generator
 
 ![Some results](Doc/Screen/Finals/terrains.png)
 
