@@ -1,0 +1,5 @@
+                    #f[(j,k)] = f[(j,k)] * Wi[i]                                                  #-> default
+                    f[(j,k)] = f[(j,k)] * Wi[i] * (1+(ri[i]**2/4 - d_jk)/(ri[i]**2/4)/2)         #-> focus sur les centres
+                    #f[(j,k)] = f[(j,k)] * Wi[i] * (1-d_jk*d_jk/(ri[i]**2/4 * ri[i]**2/4))        #-> bulles de savon
+                    #f[(j,k)] = f[(j,k)] * Wi[i] * (1+(1-d_jk*d_jk/(ri[i]**2/4 * ri[i]**2/4))/2)  #-> lissage en parabole
+                    #f[(j,k)] = f[(j,k)] * Wi[i] * (1+(np.cos(d_jk/(ri[i]**2/4)*20	))/4)           #-> ronds dans l'eau

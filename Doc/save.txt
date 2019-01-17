@@ -1,0 +1,211 @@
+\documentclass[a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{dsfont}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+
+\title{Fractals and Multiplicative cascades}
+
+\author{Bricout Raphaël}
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report summarizes some works about fractals and multiplicative cascades. 
+
+I first recapped the mathematical foundations, and then presented some applications. I also transcribed the TP from matlab to python and added some additional content to it. Eventually I tried to apply this to procedural terrain generation.
+\end{abstract}
+
+\section{Natural images}
+Natural images can easily distinguished from human-made images or random noise because they contain often some structures, and have some particular statistical properties. Indeed, they are not Gaussian, and have a more complicated distribution than basic well-known distributions.
+
+The first to study this problem was Kretzmer in 1952 about television images \cite{kret}. Later studies about this problem found that the (averaged over directions) ensemble power spectrum was often, for a natural image : $S(k) \propto 1/k^{2-\eta}$, with $k$ the modulus of the spatial frequency and $\eta$ small ($\eta\approx 0.19$ in \cite{wood}). 
+Another property is that natural images are also scale-invariant \cite{wood}. A way to sum up this point is to say that for an image $I$, a scale $r$ and a multiscale transform $T$, $\mathbb{E}T_I(r) \propto r^{\zeta(q)}$, with $q \in \mathbb{R}$ and $\zeta(q)$ the multiscaling exponent that can be decomposed in a linear part $qH$ and a non-linear one $\tau(q)$ such that $\zeta(q) = qH + \tau(q)$. The particular case of $\tau(q) = 0$ corresponds to Brownian field (used to model mountains \cite{mandel}).It can be intuited for natural images as new structures appear as you zoom in, and as lots of things are similar to fractals (e.g. coastlines).
+
+\section{Compound Poisson Cascades}
+
+To model such statistical properties, one practical framework is the multifractal processes. Indeed, such processes appear to be convenient to model signals with power law scaling: power law of the moments of the absolute value of the increments $\delta_rX(t) = X(t+r)-X(t)$. In this case, the scaling invarience is described by: $\mathbb{E}|\delta_rX|^q = \mathbb{E}|\delta_1X|^qr^{\zeta(q)}$.
+
+On particular case of multifractal processes is Infinitely Divisible
+Cascades and a particular case of this one is Compound Poisson Cascades (CPC). 
+
+In CPC, we have, for $(x_i, r_i)$ a Poisson point process, a pixel at location $x$, $Q^L_l$ the value function, and $L$ and $l$, $L>l$ the limiting scales : 
+$$Q_l^L(x) = \frac{\prod_iW_i^{\mathcal{K}(x)}}{\mathbb{E}[\prod_iW_i^{\mathcal{K}(x)}]}$$
+With:
+\begin{itemize}
+    \item $\mathcal{K}(x)$ a kernel depending on $(x_i, r_i)$
+    \item $l\leq r_i < L$ independent of $x_i$ and i.i.d. with density $1/r^3$ for images, $1/r^2$ for $1-$dimensional processes
+    \item $W_i$ independent from $(x_i, r_i)$, called multipliers. They can follow several laws, for instance log-normal law
+\end{itemize}
+For instance, $\mathcal{K}(x) = \mathds{1}_{\mathcal{D}(x_i, r_i)}(x)$ (characteristic function of the disk of radius $r_i$ centered in $x_i$).
+
+With $\mathcal{C}_l(x)$ the cone $\mathcal{C}_l(x) = \{(x', l')\ |\ l\leq r' \leq 1, x-r'/2 \leq x' < x + r'/2 \}$, we have in a more visual way $\displaystyle{Q_l^L(x) = \frac{\prod_{(x_i, r_i) \in \mathcal{C}_l(x)} W_i}{\mathbb{E}[\prod_{(x_i, r_i) \in \mathcal{C}_l(x)} W_i]}}$
+
+\begin{figure}[H]
+    \includegraphics[width=1.0\textwidth]{Images/alpha.png}
+    \caption{Result of a CPC, with different values of alpha (smoothing), and with colors}
+\end{figure}
+
+\paragraph{Computation}\ \\
+
+With this formula we can create images from CPC. There are basically $2$ ways to see the process: 
+\begin{itemize}
+    \item for each pixel $x$, multiply if by $W_i^{\mathcal{K}(x)}$ for each $i$
+    \item for each $W_i$, multiply each pixel $x$ that is in the $W_i$-defined cone
+\end{itemize}
+The two ideas are computationally equivalent ($O(X\times I)$ with $i \in I$ and $x \in X$), but we can improve one based on the fact that cones can be bounded. This way, for each $W_i$ we'll multiply all the pixels in the bounds according to the kernel. This optimization is not really measurable, but it is necessary, as in practice, we go from 20 min to 5 sec to compute a $256\times 256$ image.
+
+\begin{figure}[H]
+    \includegraphics[width=1.0\textwidth]{Images/cone.png}
+    \caption{(a): multipliers is used in some pixels, and (b): pixels are defined by several multipliers (only 2 cones represented)}
+\end{figure}
+
+\paragraph{Remark:} we may have problems depending on the random number generator we use, as some might be biased.
+
+\paragraph{Remark:} We might use some variations of multifractal processes such as Transported Generator Models (TGMs) and
+Bessel K Forms \cite{chainais_1} that have a more intuitive physical justification.
+
+\subsection{Kernels}
+We might use different Kernels to get different results. In particular we may use a non-symmetric kernel: this will create non-isotropic results. In this case possibly add some random orientation if we want an isotropic result.
+
+[IMAGES]
+
+\section{Statistics}
+
+One thing to do is to verify that images generated using CPC are similar to natural images in terms of statistics. There are several things that we can verify. 
+
+\subsection{Power Law Spectrum}
+First, let's check if the power law spectrum (squared modulus of the Fourier transform) is as expected : $\propto 1/k^{2-\eta}$ with $\eta$ small.
+
+\begin{figure}[H]
+    \includegraphics[width=1.0\textwidth]{Images/stats_power.png}
+    \caption{(a): image; (b): Fourier transform; (c): squared modulus of the Fourier transform: the slope is close to 2}
+\end{figure}
+
+\subsection{Non-Gaussian}
+
+We can verify the histogram of the wavelet transform at different scales to verify that the generated image is non-Gaussian. 
+
+\begin{figure}[H]
+    \includegraphics[width=1.0\textwidth]{Images/stats_wav.png}
+    \caption{(a): image; (b): Wavelet transform; (c): estimated histogram of wavelet coefficients, non-Gaussian (Gaussian=parabola)}
+\end{figure}
+
+\paragraph{Remark:} using different kernels we get slightly different results but with the same conclusions. 
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{Images/kernel_stats.png}
+\end{center}
+\end{figure}
+
+\section{Applications}
+
+I'd like to present some applications of CPC, without too many details (see the papers for all details), but highlighting the link with natural images. Eventually I'd like to present an idea of my about procedural terrain generation.
+
+\subsection{Image enhancement}
+
+A nice application of CPC is to magnify natural images. The principle is that natural images, for instance astronomical images, are taken at a certain resolution, that might be low (for old telescopes). The paper \cite{chainais_2} presents a way to predict the image at high resolution from a low-resolution one. 
+
+The approach tries to keep global consistency: the same multiscaling exponents as the image is magnified, and local consistency: a pack of magnified pixels must sum (in intensity) to the original low-res pixel. The new image is not unique, as it is simply a prediction, but it respects the statistical properties of natural images, contrary to other interpolation techniques.
+
+These results might be used to anticipate future observations and help the de-noising. 
+
+\begin{figure}[H]
+    \includegraphics[width=1.0\textwidth]{Images/chainais.png}
+    \caption{Illustration of the results of image enhancement (from \cite{chainais_2})}
+\end{figure}
+
+\paragraph{Remark:} One application that is not mentioned but might work is in medical image analysis, as we want to get the best results with low-quality and noised images (because imaging techniques are accurate based on the dose of radioactivity the patient ingested).
+
+\subsection{Dead Leaves model}
+One thing that is connected to natural images but slightly different is the dead leaves model. This model makes use of different kernels (for instance with other shapes) and are max cascades instead of multiplicative ones. Thus we replace $\displaystyle{Q_l(x) = \frac{\prod_i{W_i^{f(\frac{x-x_i}{r_i})}}}{\mathbb{E}[\prod_i{W_i^{f(\frac{x-x_i}{r_i})}}]}}$ by $\displaystyle{Q_l(x) = \frac{\max_i{W_i^{f(\frac{x-x_i}{r_i})}}}{\mathbb{E}[\max_i{W_i^{f(\frac{x-x_i}{r_i})}}]}}$. \\
+We can show that this still verify the statistical properties of natural images (in \cite{Gousseau}). However, the images are not very nice for the human because of the occlusions, consequences of the use of the max. It still can be used for control quality of numerical cameras by DxO. The advantages are that there are borders (useful to perform tests) and it's multi-scaling, such as natural images.
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/gousseau.png}
+    \caption{(a): usage for cameras testing; (b): image of max-cascade with circle kernel}
+\end{center}
+\end{figure}
+
+\subsection{Procedural Terrain Generation}
+
+\subsubsection{About the production}
+All in the following was self-coded. I used Unity3D as it is a convenient tool to do 3D generation, and is also easy to use. I first coded a background to generate terrain from a noise map, and then I applied it to both Perlin noise and CPC.
+
+\subsection{About Procedural Terrain Generation}
+
+The idea here was to try to apply it and define a simple way for procedural terrain generation. In the state of the art, such techniques use evolutionary algorithms or cellular automatas for instance, but I did not find one using fractals. However, in spite of this literature, the simplest and most used technique is based on noise, so my idea behind using the previous work was to have some control on what we want to do.
+
+\subsubsection{Simple technique}
+The simplest technique is based on the use Perlin noise function \cite{perlin}. 
+The principle is the following : 
+\begin{itemize}
+    \item define a sum of several Perlin noises and tune some parameters : height or scale to have the desired output
+    \item possibly do it several times for the different materials of the terrain (dirt, rocks, water, etc.)
+    \item simply define a discretized terrain based on the discrete noise and then interpolate to have the final product
+\end{itemize}
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{Images/perlin.jpg}
+    \caption{(a): Perlin noise; (b): simple voxel terrain obtained with a combination of 3 perlin noises}
+\end{center}
+\end{figure}
+
+It has some huge advantages, because it's simple, efficient, and it costs almost no memory (contrary to for instance, patch-based methods), as all is defined by a noise function.
+
+\subsubsection{With multiplicative cascades}
+We can just adapt the aforementioned technique with our noise. 
+
+An advantage is that it is chunk-consistent. As we generate procedurally, we wish to be able to generate the terrain at a distance $d>0$ of the player, even when the player moves. It requires for instance to split the terrain in chunks of $n\times n$ units (as long as the noise is discretized), but chunks cannot be defined independently, because the whole terrain has to be coherent. 
+Our technique is chunk-consistent because the noise is defined by multipliers, which are non-local.
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{Images/our.jpg}
+    \caption{(a): CPC image with $\mathcal{K}(x) = 1 + \max(0, (1-x^2)/2)$ to create kind of hills; (b): simple voxel terrain obtained with this smoothed CPC image}
+\end{center}
+\end{figure}
+
+As we compare the simple terrains obtained in Fig. 7 and Fig. 8, we see that CPC allows some punctual specific structures, contrary to Perlin, where we have to add another Perlin layer with higher scale and height to obtain similar structures.
+
+It might be computationally expensive because we have to compute each new patch based on the weights of the whole terrain. It is indeed judicious to define a bound on the radius of the multipliers to limit the computational cost.
+
+\paragraph{Kernel use}\ \\
+
+A thing we may want to do in terrain generation is to recreate structures recalling different biomes, for instance hills, mountains, but also other structures such as canyons.
+It is possible to approach this by modifying the kernel to get global specific structures. 
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{Images/struct.png}
+    \caption{(a): CPC image with sinusoidal kernel $\mathcal{K}(x) = 1+\cos(5\times2\pi x)/4$; (b): highlighting of the circle structures; (c): same result from another point of view}
+\end{center}
+\end{figure}
+
+Eventually, I played with CPC to try to generate new terrains. With only a few trials I got some convincing results.
+
+\begin{figure}[H]
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{Images/terrains.png}
+    \caption{A few examples of PCP-generated terrains}
+\end{center}
+\end{figure}
+
+\subsubsection{Conclusion about terrains}
+
+This way to generate terrains seem to produce good results, and can additionally allow to create some structures by changing the kernel. However, it is harder to use than classic methods such as Perlin noise as some internal knowledge is required to get wanted results. It also requires more memory, as multipliers needs to be stored. In practice, Perlin noise is extremely convincing for terrain generation in general, but I think CPC might be more convenient in some particular cases.
+
+\bibliographystyle{plain}
+\bibliography{bib}
+\end{document}
