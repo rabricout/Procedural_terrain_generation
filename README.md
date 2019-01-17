@@ -1,6 +1,6 @@
 # Small procedural terrain gennerator
 
-![Doc/Screen/Finals/terrains.png]
+![Some results](Doc/Screen/Finals/terrains.png)
 
 ## Overview
 
